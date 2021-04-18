@@ -1,3 +1,8 @@
+
+# Setup -------------------------------------------------------------------
+
+library("rpart")
+
 data("iris")
 
 iris_mat <- as.matrix(iris[,1:4], dimnames = dimnames(iris[,1:4]))
@@ -55,6 +60,16 @@ jf.impute <- function(x, method = "mean") {
     for (i in 1:ncol(x)) {
       x[is.na(x[,i]), i] <- median(x[, i], na.rm = TRUE)
     }
+    
+  } else if (method == "rpart") {
+    for (i in 1:ncol(x)) {
+      
+      mod_i <- rpart(formula(paste(colnames(x)[i], "~ .")),
+                   data = as.data.frame(x))
+      
+      x[, i] <- predict(mod_i, newdata = as.data.frame(x))
+      
+    }
   }
   
   if (is.df) {
@@ -101,7 +116,7 @@ jf.norm <- function(x, method = "z", na.rm = FALSE) {
     
   } else if (method == "q") {
     # this does not work completely, i have no idea why
-    x_ranks <- list(apply(x, 2, rank, ties.method = "min"), 
+    x_ranks <- list(apply(x, 2, rank, ties.method = "average"), 
                     apply(x, 2, rank, ties.method = "first"))
     
     x_sort <- apply(x, 2, sort)
@@ -109,13 +124,13 @@ jf.norm <- function(x, method = "z", na.rm = FALSE) {
     
     for (i in 1:ncol(x)) {
       i_ranks <- cbind(x_ranks[[1]][, i], x_ranks[[2]][, i])
-      
+
       i_rowavg <- aggregate(x_rowavg,
                             by = list(rank = sort(i_ranks[, 1])),
                             mean, na.rm = na.rm)
-      
+
       i_rowavg_vec_ordered <- rep(i_rowavg$x, as.vector(table(i_ranks[, 1])))
-      
+
       x[, i] <- i_rowavg_vec_ordered[i_ranks[, 2]]
     }
   }
