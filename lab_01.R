@@ -108,22 +108,30 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
     ) 
     
   } else if (method == "q") {
+    
+    if (any(is.na(x))) {
+      if (! na.rm) {
+        stop(paste("Method 'q' not possible with missing values",
+                   "and na.rm is disabled."))
+      }
+    }
+    
     # this does not work completely, i have no idea why
     x_ranks <- list(apply(x, 2, rank, ties.method = "average"), 
                     apply(x, 2, rank, ties.method = "first"))
     
-    x_sort <- apply(x, 2, sort)
-    x_rowavg <- sort(apply(x_sort, 1, mean))
+    x_sort <- apply(x, 2, sort, na.last = TRUE)
+    x_rowavg <- sort(apply(x_sort, 1, mean, na.rm = na.rm))
     
     for (i in 1:ncol(x)) {
       i_ranks <- cbind(x_ranks[[1]][, i], x_ranks[[2]][, i])
-
+      
       i_rowavg <- aggregate(x_rowavg,
                             by = list(rank = sort(i_ranks[, 1])),
                             mean, na.rm = na.rm)
-
+      
       i_rowavg_vec_ordered <- rep(i_rowavg$x, as.vector(table(i_ranks[, 1])))
-
+      
       x[, i] <- i_rowavg_vec_ordered[i_ranks[, 2]]
     }
   }
