@@ -31,8 +31,6 @@ jf.impute <- function(x, method = c("mean", "median", "rpart")) {
   
   method <- match.arg(method)
   
-  print(paste("Method is", method))
-  
   is.df <- is.data.frame(x)
   
   x_names <- dimnames(x)
@@ -55,7 +53,7 @@ jf.impute <- function(x, method = c("mean", "median", "rpart")) {
     for (i in 1:ncol(x)) {
       
       mod_i <- rpart(formula(paste(colnames(x)[i], "~ .")),
-                   data = as.data.frame(x))
+                     data = as.data.frame(x))
       
       x[is.na(x[, i]), i] <- predict(
         mod_i,
@@ -145,4 +143,79 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
   return(x)
 }
 
+
+# Tests -------------------------------------------------------------------
+
+jf.test <- function() {
+  
+  works <- list()
+  
+  n_col <- round(runif(1, 2, 100))
+  n_row <- round(runif(1, 2, 100))
+  n_cell <- n_col * n_row
+  
+  col_names <- list()
+  
+  for (i in 1:n_col){
+    col_names[[i]] <- paste(sample(c(LETTERS, letters),
+                                   round(runif(1, 1, 12)),
+                                   replace = TRUE), collapse = "")
+  }
+  
+  mat <- matrix(runif(n_cell), n_row, n_col)
+  
+  colnames(mat) <- col_names
+  
+  # Task 1 ------------------------------------------------------------------
+  
+  na_mat <- jf.na.intro(mat)
+  
+  works["jf.na.intro"] <- (!(any(is.na(mat))) && any(is.na(na_mat)) ) 
+  
+  # Task 2 ------------------------------------------------------------------
+  
+  imp_mat_list <- list()
+  
+  for (m in eval(formals(jf.impute)$method)) {
+    imp_mat_list[[m]] <- jf.impute(na_mat, method = m)
+  }
+  
+  works["jf.impute"] <- (any(is.na(na_mat)) &&
+                  !any(sapply(imp_mat_list, is.na)))
+  
+  # Task 3 ------------------------------------------------------------------
+  
+  norm_mat_list <- list()
+  
+  for (m in eval(formals(jf.norm)$method)) {
+    norm_mat_list[[m]] <- jf.norm(imp_mat_list[[1]], method = m)
+  }
+  
+  works["jf.norm.z"] <- (all(
+    round(norm_mat_list[["z"]], 5) == round(scale(imp_mat_list[[1]]), 5)))
+  
+  if (requireNamespace("preprocessCore")) {
+    ppc_norm <- preprocessCore::normalize.quantiles(imp_mat_list[[1]])
+    jf_norm <- jf.norm(imp_mat_list[[1]], method = "q")
+    
+    # somehow there are differences with an average of ~ 0.01
+    # mean(abs(jf_norm - ppc_norm))
+    
+    works["jf.norm.q"] <- all(jf_norm == ppc_norm)
+  }
+
+  # Result ------------------------------------------------------------------
+
+  works <- unlist(works)
+  
+  if (all(works)) {
+    print("All tests passed.")
+  } else {
+    passed <- names(works[works])
+    failed <- names(works[!works])
+    
+    print(paste("Tests", paste(passed, collapse = ", "), "passed,",
+                "tests", paste(failed, collapse = ", "), "failed."))
+  }
+}
 
