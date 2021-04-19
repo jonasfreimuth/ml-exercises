@@ -27,7 +27,12 @@ jf.na.intro <- function(x, prob = 0.05) {
 # Task 2 ------------------------------------------------------------------
 
 
-jf.impute <- function(x, method = "mean") {
+jf.impute <- function(x, method = c("mean", "median", "rpart")) {
+  
+  method <- match.arg(method)
+  
+  print(paste("Method is", method))
+  
   is.df <- is.data.frame(x)
   
   x_names <- dimnames(x)
@@ -72,7 +77,10 @@ jf.impute <- function(x, method = "mean") {
 # Task 3 ------------------------------------------------------------------
 
 
-jf.norm <- function(x, method = "z", na.rm = FALSE) {
+jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
+  
+  method <- match.arg(method)
+  
   is.df <- is.data.frame(x)
   
   x_names <- dimnames(x)
