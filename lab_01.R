@@ -1,18 +1,5 @@
 
-# Setup -------------------------------------------------------------------
-
-library("rpart")
-
-data("iris")
-
-iris_mat <- as.matrix(iris[,1:4], dimnames = dimnames(iris[,1:4]))
-
-indx_mat <- matrix(data = as.logical(rbinom(length(iris_mat), 1, 0.05)),
-                   nrow = nrow(iris_mat), ncol = ncol(iris_mat))
-
-
 # Task 1 ------------------------------------------------------------------
-
 
 jf.na.intro <- function(x, prob = 0.05) {
   is.df <- is.data.frame(x)
@@ -36,8 +23,6 @@ jf.na.intro <- function(x, prob = 0.05) {
   
   return(x)
 }
-
-na_iris_mat <- jf.na.intro(iris_mat)
 
 # Task 2 ------------------------------------------------------------------
 
@@ -67,7 +52,10 @@ jf.impute <- function(x, method = "mean") {
       mod_i <- rpart(formula(paste(colnames(x)[i], "~ .")),
                    data = as.data.frame(x))
       
-      x[, i] <- predict(mod_i, newdata = as.data.frame(x))
+      x[is.na(x[, i]), i] <- predict(
+        mod_i,
+        newdata = as.data.frame(x)
+      )[is.na(x[, i])]
       
     }
   }
@@ -80,9 +68,6 @@ jf.impute <- function(x, method = "mean") {
   
   return(x)
 }
-
-imp_iris_mat <- jf.impute(na_iris_mat)
-
 
 # Task 3 ------------------------------------------------------------------
 
@@ -144,21 +129,4 @@ jf.norm <- function(x, method = "z", na.rm = FALSE) {
   return(x)
 }
 
-z_norm_iris_mat <- jf.norm(imp_iris_mat)
 
-uv_norm_iris_mat <- jf.norm(imp_iris_mat, method = "uv")
-
-fs_norm_iris_mat <- jf.norm(imp_iris_mat, method = "fs")
-
-all(round(z_norm_iris_mat, 5) == round(scale(imp_iris_mat), 5))
-
-if (requireNamespace("preprocessCore")) {
-  ppc_norm <- preprocessCore::normalize.quantiles(imp_iris_mat)
-  jf_norm <- jf.norm(imp_iris_mat, method = "q")
-  
-  # somehow there are differences with an average of ~ 0.01
-  # mean(abs(jf_norm - ppc_norm))
-  
-  
-  all(jf_norm == ppc_norm)
-}
