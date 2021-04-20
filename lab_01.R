@@ -50,9 +50,15 @@ jf.impute <- function(x, method = c("mean", "median", "rpart")) {
     }
     
   } else if (method == "rpart") {
+    # ensure rpart is available
+    if (!require("rpart", quietly = TRUE)) {
+      stop(paste("Package rpart required for these functions, install via",
+                 "'install.packages(\"rpart\")'."))
+    }
+    
     for (i in 1:ncol(x)) {
       
-      mod_i <- rpart(formula(paste(colnames(x)[i], "~ .")),
+      mod_i <- rpart::rpart(formula(paste(colnames(x)[i], "~ .")),
                      data = as.data.frame(x))
       
       x[is.na(x[, i]), i] <- predict(
