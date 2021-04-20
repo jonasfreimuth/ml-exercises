@@ -28,7 +28,6 @@ jf.na.intro <- function(x, prob = 0.05) {
 
 
 jf.impute <- function(x, method = c("mean", "median", "rpart")) {
-  
   method <- match.arg(method)
   
   is.df <- is.data.frame(x)
@@ -126,18 +125,24 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
     # use the mean rank average for all tied cells
     x <- apply(x, 2, function(x_col) {
       
+      x_col_new <- x_col
+      
       # go through every unique rank (group tied cells together)
       for (rank in unique(rank(x_col, na.last = TRUE))) {
+        # generate selection vector where x_col has the current rank
+        rank_select <- rank(x_col, na.last = TRUE) == rank
+        
         # find the indices of the rank average corresponding to the rows
         # in x_col sharing the same rank
         rank_avg_idcs <- rank(x_col,
                              na.last = TRUE,
-                             ties.method = "first")[rank(x_col) == rank]
+                             ties.method = "first"
+                             )[rank_select]
         
         # match the mean rank average to its corresponding rows
-        x_col[rank(x_col) == rank] <- mean(x_rankavg[rank_avg_idcs])
+        x_col_new[rank_select] <- mean(x_rankavg[rank_avg_idcs])
       }
-        return(x_col)
+        return(x_col_new)
     })
   }
   
