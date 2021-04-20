@@ -153,6 +153,7 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
 
 # Tests -------------------------------------------------------------------
 
+# Very poor mans unit tests:
 jf.test <- function() {
   
   works <- list()
@@ -161,15 +162,25 @@ jf.test <- function() {
   n_row <- round(runif(1, 2, 100))
   n_cell <- n_col * n_row
   
-  col_names <- list()
-  
-  for (i in 1:n_col){
-    col_names[[i]] <- paste(sample(c(LETTERS, letters),
-                                   round(runif(1, 1, 12)),
-                                   replace = TRUE), collapse = "")
+  # ensure colnames are unique
+  # there is probably a better way to do this but i'm annoyed i'm unable to 
+  # deliver a solution that works properly so i don't want to spend more time
+  # on this
+  repeat {
+    col_names <- list()
+    
+    for (i in 1:n_col){
+      col_names[[i]] <- paste(sample(letters,
+                                     round(runif(1, 1, 12)),
+                                     replace = TRUE), collapse = "")
+    }
+    
+    if (length(col_names) == length(unique(col_names))) {
+      break
+    }
+    
   }
-  
-  mat <- matrix(runif(n_cell), n_row, n_col)
+  mat <- matrix(rnorm(n_cell), n_row, n_col)
   
   colnames(mat) <- col_names
   
@@ -195,20 +206,22 @@ jf.test <- function() {
   norm_mat_list <- list()
   
   for (m in eval(formals(jf.norm)$method)) {
-    norm_mat_list[[m]] <- jf.norm(imp_mat_list[[1]], method = m)
+    norm_mat_list[[m]] <- jf.norm(na_mat, method = m)
   }
   
   works["jf.norm.z"] <- (all(
-    round(norm_mat_list[["z"]], 5) == round(scale(imp_mat_list[[1]]), 5)))
+    round(norm_mat_list[["z"]], 5) == round(scale(na_mat), 5), na.rm = TRUE))
   
   if (requireNamespace("preprocessCore")) {
-    ppc_norm <- preprocessCore::normalize.quantiles(imp_mat_list[[1]])
-    jf_norm <- jf.norm(imp_mat_list[[1]], method = "q")
+    ppc_norm <- preprocessCore::normalize.quantiles(na_mat)
+    jf_norm <- jf.norm(na_mat, method = "q")
     
     # somehow there are differences with an average of ~ 0.01
-    # mean(abs(jf_norm - ppc_norm))
+    print(paste("Mean difference between jf.norm.q and",
+                "preprocessCore::normalize.quantiles:"))
+    print(mean(abs(jf_norm - ppc_norm), na.rm = TRUE))
     
-    works["jf.norm.q"] <- all(jf_norm == ppc_norm)
+    works["jf.norm.q"] <- all(jf_norm == ppc_norm, na.rm = TRUE)
   }
 
   # Result ------------------------------------------------------------------
