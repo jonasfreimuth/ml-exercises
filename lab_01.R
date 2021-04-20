@@ -159,35 +159,40 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
 # Tests -------------------------------------------------------------------
 
 # Very poor mans unit tests:
-jf.test <- function() {
+jf.test <- function(data = NULL) {
   
   works <- list()
   
-  n_col <- round(runif(1, 2, 100))
-  n_row <- round(runif(1, 2, 100))
-  n_cell <- n_col * n_row
-  
-  # ensure colnames are unique
-  # there is probably a better way to do this but i'm annoyed i'm unable to 
-  # deliver a solution that works properly so i don't want to spend more time
-  # on this
-  repeat {
-    col_names <- list()
+  if (is.null(data)) {
     
-    for (i in 1:n_col){
-      col_names[[i]] <- paste(sample(letters,
-                                     round(runif(1, 1, 12)),
-                                     replace = TRUE), collapse = "")
+    n_col <- round(runif(1, 2, 100))
+    n_row <- round(runif(1, 2, 100))
+    n_cell <- n_col * n_row
+    
+    # ensure colnames are unique
+    # there is probably a better way to do this but i'm annoyed i'm unable to 
+    # deliver a solution that works properly so i don't want to spend more time
+    # on this
+    repeat {
+      col_names <- list()
+      
+      for (i in 1:n_col){
+        col_names[[i]] <- paste(sample(letters,
+                                       round(runif(1, 1, 12)),
+                                       replace = TRUE), collapse = "")
+      }
+      
+      if (length(col_names) == length(unique(col_names))) {
+        break
+      }
+      
     }
+    mat <- matrix(rnorm(n_cell), n_row, n_col)
     
-    if (length(col_names) == length(unique(col_names))) {
-      break
-    }
+    colnames(mat) <- col_names
     
+    mat <- as.data.frame(mat)
   }
-  mat <- matrix(rnorm(n_cell), n_row, n_col)
-  
-  colnames(mat) <- col_names
   
   # Task 1 ------------------------------------------------------------------
   
