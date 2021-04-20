@@ -222,9 +222,16 @@ jf.test <- function(data = NULL) {
   works["jf.norm.z"] <- (all(
     round(norm_mat_list[["z"]], 5) == round(scale(na_mat), 5), na.rm = TRUE))
   
-  if (requireNamespace("preprocessCore")) {
-    ppc_norm <- preprocessCore::normalize.quantiles(na_mat)
-    jf_norm <- jf.norm(na_mat, method = "q")
+  if (require("preprocessCore", quietly = TRUE)) {
+    # for mean differences results need to be in matrix form
+    
+    # ppC normalize.quantiles expects a matrix, therefore coercion takes place
+    # immediately
+    ppc_norm <- normalize.quantiles(as.matrix(na_mat))
+    
+    # jf.norm should deal with dataframes so matrix coercion takes place after
+    # the function call
+    jf_norm <- as.matrix(jf.norm(na_mat, method = "q"))
     
     # somehow there are differences with an average of ~ 0.01
     print(paste("Mean difference between jf.norm.q and",
