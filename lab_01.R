@@ -80,8 +80,7 @@ jf.impute <- function(x, method = c("mean", "median", "rpart")) {
 
 # Task 3 ------------------------------------------------------------------
 
-
-jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
+jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
   
   method <- match.arg(method)
   
@@ -97,14 +96,14 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
     
     x <- apply(x, 2, function(x) {
       if (method == "z") {
-        x <- (x - mean(x, na.rm = na.rm))/sd(x, na.rm = na.rm)
+        x <- (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
         
       } else if (method == "uv") {
-        x <- (x)/sd(x, na.rm = na.rm)
+        x <- (x)/sd(x, na.rm = TRUE)
         
       } else if (method == "fs") {
-        x <- (x - min(x, na.rm = na.rm))/
-          (max(x, na.rm = na.rm) - min(x, na.rm = na.rm))
+        x <- (x - min(x, na.rm = TRUE))/
+          (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
       }
       
       return(x)
@@ -112,32 +111,34 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q"), na.rm = FALSE) {
     ) 
     
   } else if (method == "q") {
-    
-    if (any(is.na(x))) {
-      if (! na.rm) {
-        stop(paste("Method 'q' not possible with missing values",
-                   "and na.rm is disabled."))
-      }
-    }
-    
-    # this does not work completely, i have no idea why
-    x_ranks <- list(apply(x, 2, rank, ties.method = "average"), 
-                    apply(x, 2, rank, ties.method = "first"))
-    
+
+    # sort each column in descending order
+    # ranks are also in order afterwards
     x_sort <- apply(x, 2, sort, na.last = TRUE)
-    x_rowavg <- sort(apply(x_sort, 1, mean, na.rm = na.rm))
     
-    for (i in 1:ncol(x)) {
-      i_ranks <- cbind(x_ranks[[1]][, i], x_ranks[[2]][, i])
+    # calculate the average for each row in the column sorted
+    # matrix
+    # i.e. calculate the average for each rank
+    x_rankavg <- sort(apply(x_sort, 1, mean, na.rm = TRUE))
+    
+    # match rank averages back to individual columns
+    # in cases where multiple cells have the same ranks
+    # use the mean rank average for all tied cells
+    x <- apply(x, 2, function(x_col) {
       
-      i_rowavg <- aggregate(x_rowavg,
-                            by = list(rank = sort(i_ranks[, 1])),
-                            mean, na.rm = na.rm)
-      
-      i_rowavg_vec_ordered <- rep(i_rowavg$x, as.vector(table(i_ranks[, 1])))
-      
-      x[, i] <- i_rowavg_vec_ordered[i_ranks[, 2]]
-    }
+      # go through every unique rank (group tied cells together)
+      for (rank in unique(rank(x_col, na.last = TRUE))) {
+        # find the indices of the rank average corresponding to the rows
+        # in x_col sharing the same rank
+        rank_avg_idcs <- rank(x_col,
+                             na.last = TRUE,
+                             ties.method = "first")[rank(x_col) == rank]
+        
+        # match the mean rank average to its corresponding rows
+        x_col[rank(x_col) == rank] <- mean(x_rankavg[rank_avg_idcs])
+      }
+        return(x_col)
+    })
   }
   
   if (is.df) {
