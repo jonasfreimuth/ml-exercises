@@ -7,12 +7,18 @@ jf.plot.mds <- function(data,
                                 "manhattan",
                                 "canberra",
                                 "binary",
-                                "minkowski"),
+                                "minkowski",
+                                "correlation"),
                       several.ok = TRUE)
   
+  # check if methods are possible with data
   if (any("binary" %in% method) && all(apply(data, 2, is.numeric))) {
     stop("Method 'binary' does not work with all numerical data.")
-  }
+  } 
+  
+  if(any("correlation" %in% method) && any(!apply(data, 2, is.numeric))) {
+    stop("Method 'correlation' does not work as some columns are not numeric.")
+  } 
   
   scale_factor <- 1.1
   
@@ -21,11 +27,16 @@ jf.plot.mds <- function(data,
   
   layout_vec <- c(round(sqrt(length(method))), ceiling(sqrt(length(method))))
   
-  par(mfrow = layout_vec)
+  op <- par(mfrow = layout_vec)
   
   for (m in method) {
-    d.scale[[m]] <- cmdscale(d = dist(data, method = m))
     
+    if (m == "correlation") {
+      # matrix transposed as internal correlation works colwise
+      d.scale[[m]] <- cmdscale(d = jf.cor.dist(t(as.matrix(data))))
+    } else {
+      d.scale[[m]] <- cmdscale(d = dist(data, method = m))
+    }
     # TODO: Scaling that works regardless of sign
     lims[[m]] <- range(d.scale[[m]]) * scale_factor
     
@@ -36,7 +47,21 @@ jf.plot.mds <- function(data,
     title(m)
   }
   
+  # reset par
+  par(op)
 }
+
+jf.cor.dist <- function(x) {
+
+  if (! is.matrix(x)) {
+    warning("Coercing data to matrix...")
+  }
+
+  x <- as.matrix(x)
+  
+  return(1 - abs(cor(x)))
+}
+
 
 # main part
 if (sys.nframe() == 0) {
@@ -44,5 +69,10 @@ if (sys.nframe() == 0) {
                        header = TRUE,
                        row.names = 1)
   
-  jf.plot.mds(cancer, method = c("euc", "min", "man", "can"))
+  # normal plot
+  jf.plot.mds(cancer, method = c("euc", "man", "can", "cor"))
+  
+  # plot with transposed matrix
+  # will show the variable distances
+  jf.plot.mds(t(as.matrix(cancer)), c("euc", "man", "can", "cor"))
 }
