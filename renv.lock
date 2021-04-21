@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.0.2",
+    "Version": "4.0.5",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -8,7 +8,29 @@
       }
     ]
   },
+  "Bioconductor": {
+    "Version": "3.12"
+  },
   "Packages": {
+    "BiocManager": {
+      "Package": "BiocManager",
+      "Version": "1.30.12",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "462dbb15753eb52fb62e28507f382d2d"
+    },
+    "BiocVersion": {
+      "Package": "BiocVersion",
+      "Version": "3.12.0",
+      "Source": "Bioconductor",
+      "Hash": "ee4d027afb8f52fec1f46b9f0a8660e9"
+    },
+    "preprocessCore": {
+      "Package": "preprocessCore",
+      "Version": "1.52.1",
+      "Source": "Bioconductor",
+      "Hash": "d5c78cf1defde79ad72d44ac0e2276de"
+    },
     "renv": {
       "Package": "renv",
       "Version": "0.13.2",
@@ -16,9 +38,12 @@
       "Repository": "CRAN",
       "Hash": "079cb1f03ff972b30401ed05623cbe92"
     },
+    "rpart": {
+      "Package": "rpart",
+      "Version": "4.1-15",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "1c3ef87cbb81c23ac96797781ec7aecc"
+      "Hash": "9787c1fcb680e655d062e7611cadf78e"
     }
   }
 }
