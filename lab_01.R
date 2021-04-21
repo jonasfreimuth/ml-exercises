@@ -79,7 +79,7 @@ jf.impute <- function(x, method = c("mean", "median", "rpart")) {
 
 # Task 3 ------------------------------------------------------------------
 
-jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
+jf.norm <- function(x, method = c("z", "uv", "fs", "q"), avg.acr.ties = TRUE) {
   
   method <- match.arg(method)
   
@@ -131,18 +131,22 @@ jf.norm <- function(x, method = c("z", "uv", "fs", "q")) {
       for (rank in unique(rank(x_col, na.last = TRUE))) {
         # generate selection vector where x_col has the current rank
         rank_select <- rank(x_col, na.last = TRUE) == rank
-        
         # find the indices of the rank average corresponding to the rows
         # in x_col sharing the same rank
         rank_avg_idcs <- rank(x_col,
-                             na.last = TRUE,
-                             ties.method = "first"
-                             )[rank_select]
+                              na.last = TRUE,
+                              ties.method = "first"
+        )[rank_select]
         
-        # match the mean rank average to its corresponding rows
-        x_col_new[rank_select] <- mean(x_rankavg[rank_avg_idcs])
+        if (avg.acr.ties) {
+          # match the mean rank average to its corresponding rows
+          x_col_new[rank_select] <- mean(x_rankavg[rank_avg_idcs])
+          
+        } else {
+          x_col_new[rank_select] <- x_rankavg[rank_avg_idcs]
+        }
       }
-        return(x_col_new)
+      return(x_col_new)
     })
   }
   
@@ -231,7 +235,7 @@ jf.test <- function(data = NULL) {
     
     # jf.norm should deal with dataframes so matrix coercion takes place after
     # the function call
-    jf_norm <- as.matrix(jf.norm(na_mat, method = "q"))
+    jf_norm <- as.matrix(jf.norm(na_mat, method = "q", avg.acr.ties = FALSE))
     
     # somehow there are differences with an average of ~ 0.01
     print(paste("Mean difference between jf.norm.q and",
