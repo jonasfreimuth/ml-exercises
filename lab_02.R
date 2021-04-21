@@ -1,6 +1,8 @@
 # plot mds of data using various distance methods
 jf.plot.mds <- function(data,
-                        method = c("euc", "man", "can", "max")) {
+                        method = c("euc", "man", "can", "max"),
+                        scale.factor = 1.1,
+                        row.labels = TRUE) {
   
   method <- match.arg(method, c("euclidean",
                                 "maximum",
@@ -20,8 +22,6 @@ jf.plot.mds <- function(data,
     stop("Method 'correlation' does not work as some columns are not numeric.")
   } 
   
-  scale_factor <- 1.1
-  
   d.scale <- list()
   lims <- list()
   
@@ -30,21 +30,33 @@ jf.plot.mds <- function(data,
   op <- par(mfrow = layout_vec)
   
   for (m in method) {
-    
     if (m == "correlation") {
       # matrix transposed as internal correlation works colwise
       d.scale[[m]] <- cmdscale(d = jf.cor.dist(t(as.matrix(data))))
     } else {
       d.scale[[m]] <- cmdscale(d = dist(data, method = m))
     }
-    # TODO: Scaling that works regardless of sign
-    lims[[m]] <- range(d.scale[[m]]) * scale_factor
+    
+    lims[[m]] <- range(d.scale[[m]])
+    
+    if (all(jf.is.positive(lims[[m]]))) {
+      lims[[m]][1] <- lims[[m]][1] - lims[[m]][1] * (scale.factor - 1)
+      lims[[m]][2] <- lims[[m]][2] * scale.factor
+    } else if (all(!jf.is.positive(lims[[m]]))) {
+      lims[[m]][1] <- lims[[m]][1] * scale.factor
+      lims[[m]][2] <- lims[[m]][2] + lims[[m]][2] * (scale.factor - 1)
+    } else {
+      lims[[m]] <- lims[[m]] * scale.factor
+    }
     
     plot(d.scale[[m]], xlim = lims[[m]], ylim = lims[[m]],
          type = "n", ann = FALSE)
     points(d.scale[[m]], pch = 18)
-    text(d.scale[[m]], labels = row.names(data), adj = c(-0.3, -0.3))
     title(m)
+    
+    if (row.labels){
+      text(d.scale[[m]], labels = row.names(data), adj = c(-0.3, -0.3))
+    }
   }
   
   # reset par
@@ -52,14 +64,18 @@ jf.plot.mds <- function(data,
 }
 
 jf.cor.dist <- function(x) {
-
+  
   if (! is.matrix(x)) {
     warning("Coercing data to matrix...")
   }
-
+  
   x <- as.matrix(x)
   
   return(1 - abs(cor(x)))
+}
+
+jf.is.positive <- function(x) {
+  return(x / abs(x) == 1)
 }
 
 
