@@ -81,9 +81,15 @@ jf.is.positive <- function(x) {
 
 # main part
 if (sys.nframe() == 0) {
-  cancer <- read.table("data/ML-Data/fraumeni1960-cancer.tab",
-                       header = TRUE,
-                       row.names = 1)
+  if (file.exists("data/ML-Data/fraumeni1960-cancer.tab")) {
+    cancer <- read.table("data/ML-Data/fraumeni1960-cancer.tab",
+                         header = TRUE,
+                         row.names = 1)
+  } else {
+    cancer <- read.table(file.choose(),
+                         header = TRUE,
+                         row.names = 1)
+  }
   
   # normal plot
   jf.plot.mds(cancer, method = c("euc", "man", "can", "cor"))
