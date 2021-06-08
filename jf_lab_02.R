@@ -2,7 +2,8 @@
 jf.plot.mds <- function(data,
                         method = c("euc", "man", "can", "max"),
                         scale.factor = 1.1,
-                        row.labels = TRUE) {
+                        row.labels = TRUE,
+                        grid = TRUE) {
   
   method <- match.arg(method, c("euclidean",
                                 "maximum",
@@ -25,9 +26,11 @@ jf.plot.mds <- function(data,
   d.scale <- list()
   lims <- list()
   
-  layout_vec <- c(round(sqrt(length(method))), ceiling(sqrt(length(method))))
-  
-  op <- par(mfrow = layout_vec)
+  if (grid) {
+    layout_vec <- c(round(sqrt(length(method))), ceiling(sqrt(length(method))))
+    
+    op <- par(mfrow = layout_vec)
+  }
   
   for (m in method) {
     if (m == "correlation") {
@@ -54,13 +57,15 @@ jf.plot.mds <- function(data,
     points(d.scale[[m]], pch = 18)
     title(m)
     
-    if (row.labels){
+    if (row.labels) {
       text(d.scale[[m]], labels = row.names(data), adj = c(-0.3, -0.3))
     }
   }
   
-  # reset par
-  par(op)
+  if (grid) {
+    # reset par
+    par(op)
+  }
 }
 
 jf.cor.dist <- function(x) {
