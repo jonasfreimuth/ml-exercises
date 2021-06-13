@@ -1,3 +1,4 @@
+## ----Setup-------------------------------------------------
 library(glmnet)
 
 data("mtcars")
@@ -7,32 +8,42 @@ MSE <- function (obs, pred) {
   return (mse)
 }
 
-mtcars <- as.matrix(mtcars)
+mtcars <- scale(as.matrix(mtcars))
 
 ALPHA <- 1
 
+reps <- 250
 
-# Scenario 1 --------------------------------------------------------------
 
+## ----Scenario 1--------------------------------------------
 y <- mtcars[,  1]
 x <- mtcars[, -1]
 
-cross_val <- cv.glmnet(x, y, nfolds = 5,
-                       alpha = ALPHA, family = "gaussian")
+MSEs_1 <- rep(0, reps)
 
-LAMBDA <- cross_val$lambda.1se
-lasso.mod <- glmnet(x, y, alpha = ALPHA, family = "gaussian",
-                    lambda = LAMBDA)
+for (i in 1:reps) {
+  cross_val <- cv.glmnet(x, y, nfolds = 5,
+                         alpha = ALPHA, family = "gaussian")
+  
+  LAMBDA <- cross_val$lambda.1se
+  lasso.mod <- glmnet(x, y, alpha = ALPHA, family = "gaussian",
+                      lambda = LAMBDA)
+  
+  y.pred <- predict(lasso.mod, x)
+  
+  MSEs_1[i] <- MSE(y, y.pred)
+}
 
-y.pred <- predict(lasso.mod, x)
+MSE_1 <- mean(MSEs_1)
 
-MSE_1 <- MSE(y, y.pred)
+print(paste("MSE of Scenario 1:", round(MSE_1, 3)))
 
-# Scenario 2 --------------------------------------------------------------
 
-reps <- 500
+## ----Scenario 2--------------------------------------------
 
-MSE_2 <- rep(0, reps)
+reps <- 250
+
+MSEs_2 <- rep(0, reps)
 
 for (i in 1:reps) {
   training_idcs <- sample(1:nrow(mtcars), floor(nrow(mtcars) * 0.9))
@@ -50,22 +61,15 @@ for (i in 1:reps) {
                          alpha = ALPHA, family = "gaussian")
   
   LAMBDA <- cross_val$lambda.1se
-  
   lasso.mod <- glmnet(x.train, y.train, alpha = ALPHA, family = "gaussian",
                       lambda = LAMBDA)
   
   y.pred <- predict(lasso.mod, x.test)
   
-  MSE_2[i] <- MSE(y.test, y.pred)
+  MSEs_2[i] <- MSE(y.test, y.pred)
 }
 
-MSE_2 <- mean(MSE_2)
+MSE_2 <- mean(MSEs_2)
 
-# Comparison --------------------------------------------------------------
-
-print(paste("MSE of Scenario 1:", round(MSE_1, 3)))
 print(paste("MSE of Scenario 2:", round(MSE_2, 3)))
-
-
-
 
