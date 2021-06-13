@@ -1,0 +1,35 @@
+---
+title: "Sum of Squares method example"
+author: "Jonas Freimuth"
+date: "5/26/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Minimize Sum of squares of:
+$1 = 1\beta$;
+$1 = 2\beta$;
+$3 = 3\beta$;  
+  
+$\Rightarrow S(\beta) = (1 - 1\beta)^2 + (1 - 2\beta)^2 + (3 - 3\beta)^2$
+$= (1 - 2\beta + \beta^2) + (4\beta^2 - 4\beta + 1) + (9\beta^2 - 6\beta + 9)$
+$= 14\beta^2 - 12\beta + 11$  
+
+Finding the point of zero gradient:  
+$\frac{\partial S(\beta)}{\partial \beta} = 0 = 28\beta - 12$  
+$12 = 28\beta$  
+$7/3 = \beta$
+
+```{r}
+x <- c(1, 2, 3)
+y <- c(1, 1, 3)
+
+plot(x, y, xlim = c(0, 4), ylim = c(0, 4))
+abline(c(0,0), c(4, (3/7) * 4))
+
+```
+
+
