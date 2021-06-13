@@ -30,7 +30,7 @@ MSE_1 <- MSE(y, y.pred)
 
 # Scenario 2 --------------------------------------------------------------
 
-reps <- 1000
+reps <- 500
 
 MSE_2 <- rep(0, reps)
 
@@ -63,8 +63,8 @@ MSE_2 <- mean(MSE_2)
 
 # Comparison --------------------------------------------------------------
 
-print(MSE_1)
-print(MSE_2)
+print(paste("MSE of Scenario 1:", round(MSE_1, 3)))
+print(paste("MSE of Scenario 2:", round(MSE_2, 3)))
 
 
 
