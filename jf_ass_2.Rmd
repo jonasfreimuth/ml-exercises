@@ -1,7 +1,10 @@
 ---
 title: "Assignment 2"
+author: "Jonas Freimuth"
+date: "6/13/2021"
 output: pdf_document
 ---
+
 
 *Disclaimer: This assignment was prepared together with Philipp*
 
