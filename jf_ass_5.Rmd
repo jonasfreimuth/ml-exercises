@@ -9,6 +9,14 @@ library("keras")
 
 ## function definitions
 
+# function for splitting a data frame into a set of test and training data
+#   assumes that the prediction variable is categorical and all predictor
+#   variables are numeric
+# 
+#   the categorical prediction variable is encoded in the one-hot scheme
+# 
+#   training predictor variables are normalized and scaled to their standard deviation
+#   and the test data is normalized and scaled the same way (to training data)
 generateTestTraining <- function(df, dep_col, pred_col) {
   
   # extract dependent variable and convert to numeric encoding
@@ -77,12 +85,77 @@ generateTestTraining <- function(df, dep_col, pred_col) {
   return(out)
 }
 
-train_model <- function(data, optimizer = "adam",
+
+train_model <- function(data,
+                        optimizer = "adam",
                         input_act = "sigmoid",
                         intermediate_act = "sigmoid",
-                        last_act = "softmax") {
+                        last_act = "softmax",
+                        epochs = 500,
+                        batch_size = 32,
+                        validation_split,
+                        verbose = 0) {
   
-                        }
+  n_lvl <- ncol(data$train$y)
+  n_var <- ncol(data$train$x)
+  
+  # set up model
+  model <- keras_model_sequential() 
+  
+  model %>% 
+    
+    # define input layer
+    layer_dense(units       = n_var,
+                activation  = input_act,
+                input_shape = n_var) %>% 
+    
+    # define intermediate layers
+    layer_dense(units = 10,
+                activation = intermediate_act) %>%
+    
+    
+    # define output layer
+    # number of nodes/units corresponds to number of levels of dependent variable
+    # uses softmax activation for multiclass prediction
+    layer_dense(units = ncol(data$train$y),
+                activation = last_act)
+  
+  # specify how model will be run
+  model %>% 
+    compile(loss      = "binary_crossentropy",
+            optimizer = optimizer,
+            metrics   = c("accuracy"))
+  
+  browser()
+  
+  # train the model
+  history <- model %>% 
+  fit(x = data$train$x,
+      y = data$train$y,
+      
+      epochs = epochs,
+      
+      batch_size = batch_size,
+      
+      validation_split = 0.2,
+      verbose = verbose)
+  
+  # give the final model performance on the testing data
+  print(model %>% evaluate(data$test$x, data$test$y, verbose = verbose))
+
+  # extract class probabilities for test data
+  prob <- model %>% 
+    predict(data$test$x)
+  
+  # extract predicted classes from probabilities
+  predClass <- apply(prob, 1, which.max)
+  
+  # confusion table
+  conf_table <- table(predicted = predClass, actual = data$test$y_orig)
+  
+  return(list(model = model, history = history, confusionTable = conf_table))
+  
+}
 
 
 ```
@@ -91,87 +164,30 @@ During setup I noticed that training looks quite different when the data is not
 shuffled:
 
 ```{r Data preparation, include=FALSE}
+
 # load data
 data("iris")
 
-data      <- generateTestTraining(iris,
+data_orig <- generateTestTraining(iris,
                                   dep_col  = names(iris)[ 5],
                                   pred_col = names(iris)[-5])
 
-data_orig <- generateTestTraining(iris[sample(1:nrow(iris)), ],
+data      <- generateTestTraining(iris[sample(1:nrow(iris)), ],
                                   dep_col  = names(iris)[ 5],
                                   pred_col = names(iris)[-5])
 
 ```
 
-```{r Model specification, include=FALSE}
 
-# set up model
-model <- keras_model_sequential() 
 
-model %>% 
-  
-  # define input layer
-  layer_dense(units       = n_lvl,
-              activation  = "sigmoid",
-              input_shape = n_var) %>% 
-  
-  # define intermediate layers
-  layer_dense(units = 10,
-              activation = 'sigmoid') %>%
-  
-  
-  # define output layer
-  # number of nodes/units corresponds to number of levels of dependent variable
-  # uses softmax activation for multiclass prediction
-  layer_dense(units = ncol(y_train),
-              activation = "softmax")
 
-# specify how model will be run
-model %>% 
-  compile(loss      = "binary_crossentropy",
-          optimizer = "adam",
-          metrics   = c("accuracy"))
+
+```{r working model}
+
+train_model(data)
 
 ```
 
-```{r Model training, include=FALSE}
-
-history <- model %>% 
-  fit(x = x_train,
-      y = y_train,
-      
-      epochs = 500,
-      
-      batch_size = 32,
-      
-      validation_split = 0.2,
-      verbose = 0)
-
-```
-
-```{r Learning history}
-
-plot(history)
-
-```
-
-
-```{r Model evaluation}
-
-model %>% evaluate(x_test, y_test, verbose = 0)
-
-# extract class probabilities
-prob <- model %>% 
-  predict(x_test)
-
-# extract predicted classes
-predClass <- apply(prob, 1, which.max)
-
-# confusion table
-table(predicted = predClass, actual = y_test_vec)
-
-```
 
 
 
