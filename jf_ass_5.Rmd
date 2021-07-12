@@ -7,73 +7,100 @@ output: html_notebook
 
 library("keras")
 
-# load data
-data("iris")
+## function definitions
 
-iris <- iris[sample(1:nrow(iris)), ]
+generateTestTraining <- function(df, dep_col, pred_col) {
+  
+  # extract dependent variable and convert to numeric encoding
+  y <- df[[dep_col]] %>% 
+    as.numeric()
+  
+  # extract predictor variables and save in a matrix
+  x <- subset(df, select = pred_col) %>% 
+    as.matrix()
+  
+  n     <- nrow(df)
+  n_var <- ncol(x)
+  n_lvl <- length(unique(y))
+  
+  
+  ## split into training and test data
+  
+  # generate membership vector for test or training data
+  mem_vec <- sample(1:2, n, replace = TRUE, prob = c(0.7, 0.3))
+  
+  # split data according to membership vector
+  x_train <- x[mem_vec == 1, ]
+  x_test  <- x[mem_vec == 2, ]
+  
+  y_train <- y[mem_vec == 1] %>% 
+    # we need to subtract one in order for the factor levels to start at 0
+    `-`(1) %>% 
+    # use one hot encoding, as is provided by keras::to_categorical
+    to_categorical(num_classes = n_lvl)
+  
+  y_test <- y[mem_vec == 2] %>% 
+    # we need to subtract one in order for the factor levels to start at 0
+    `-`(1) %>% 
+    # use one hot encoding, as is provided by keras::to_categorical
+    to_categorical(num_classes = n_lvl)
+  
+  # save original test values for y
+  y_test_vec <- y[mem_vec == 2]
+  
+  n_train <- length(y_train)
+  n_test  <- length(y_test )
+  
+  
+  ## normalization of test and training data
+  
+  # get means and sds of all pred vars for training data
+  train_mean <- apply(x_train, 2, mean)
+  train_sd   <- apply(x_train, 2, sd)
+  
+  # center and scale test and training data to mean and sd of training data
+  for (i in 1:n_var) {
+    
+    x_train[ , i] <- scale(x_train[ , i],
+                           center = train_mean[i],
+                           scale  = train_sd  [i])
+    
+    x_test [ , i] <- scale(x_test [ , i],
+                           center = train_mean[i],
+                           scale  = train_sd  [i])
+    
+  }
+  
+  out <- list(train = list(x = x_train, y = y_train),
+              test  = list(x = x_test , y = y_test , y_orig = y_test_vec))
+  
+  return(out)
+}
+
+train_model <- function(data, optimizer = "adam",
+                        input_act = "sigmoid",
+                        intermediate_act = "sigmoid",
+                        last_act = "softmax") {
+  
+                        }
+
 
 ```
 
+During setup I noticed that training looks quite different when the data is not 
+shuffled:
+
 ```{r Data preparation, include=FALSE}
-# extract dependent variable and convert to numeric encoding
-y <- iris$Species %>% 
-  as.numeric()
+# load data
+data("iris")
 
-# extract predictor variables and save in a matrix
-x <- subset(iris, select = names(iris)[-5]) %>% 
-  as.matrix()
+data      <- generateTestTraining(iris,
+                                  dep_col  = names(iris)[ 5],
+                                  pred_col = names(iris)[-5])
 
-n     <- nrow(iris)
-n_var <- ncol(x)
-n_lvl <- length(unique(y))
-
-
-## split into training and test data
-
-# generate membership vector for test or training data
-mem_vec <- sample(1:2, n, replace = TRUE, prob = c(0.7, 0.3))
-
-# split data according to membership vector
-x_train <- x[mem_vec == 1, ]
-x_test  <- x[mem_vec == 2, ]
-
-y_train <- y[mem_vec == 1] %>% 
-  # we need to subtract one in order for the factor levels to start at 0
-  `-`(1) %>% 
-  # use one hot encoding, as is provided by keras::to_categorical
-  to_categorical(num_classes = n_lvl)
-
-y_test <- y[mem_vec == 2] %>% 
-  # we need to subtract one in order for the factor levels to start at 0
-  `-`(1) %>% 
-  # use one hot encoding, as is provided by keras::to_categorical
-  to_categorical(num_classes = n_lvl)
-
-# save original test values for y
-y_test_vec <- y[mem_vec == 2]
-
-n_train <- length(y_train)
-n_test  <- length(y_test )
-
-
-## normalization of test and training data
-
-# get means and sds of all pred vars for training data
-train_mean <- apply(x_train, 2, mean)
-train_sd   <- apply(x_train, 2, sd)
-
-# center and scale test and training data to mean and sd of training data
-for (i in 1:n_var) {
-  
-  x_train[ , i] <- scale(x_train[ , i],
-                         center = train_mean[i],
-                         scale  = train_sd  [i])
-  
-  x_test [ , i] <- scale(x_test [ , i],
-                         center = train_mean[i],
-                         scale  = train_sd  [i])
-  
-}
+data_orig <- generateTestTraining(iris[sample(1:nrow(iris)), ],
+                                  dep_col  = names(iris)[ 5],
+                                  pred_col = names(iris)[-5])
 
 ```
 
