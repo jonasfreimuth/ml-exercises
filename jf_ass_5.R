@@ -1,0 +1,249 @@
+## ----Setup--------------------------------------------------------------------
+
+library("keras")
+library("ggplot2")
+
+## function definitions
+
+# function for splitting a data frame into a set of test and training data
+#   assumes that the prediction variable is categorical and all predictor
+#   variables are numeric
+# 
+#   the categorical prediction variable is encoded in the one-hot scheme
+# 
+#   training predictor variables are normalized and scaled to their standard deviation
+#   and the test data is normalized and scaled the same way (to training data)
+generateTestTraining <- function(df, dep_col, pred_col) {
+  
+  # extract dependent variable and convert to numeric encoding
+  y <- df[[dep_col]] %>% 
+    as.numeric()
+  
+  # extract predictor variables and save in a matrix
+  x <- subset(df, select = pred_col) %>% 
+    as.matrix()
+  
+  n     <- nrow(df)
+  n_var <- ncol(x)
+  n_lvl <- length(unique(y))
+  
+  
+  ## split into training and test data
+  
+  # generate membership vector for test or training data
+  mem_vec <- sample(1:2, n, replace = TRUE, prob = c(0.7, 0.3))
+  
+  # split data according to membership vector
+  x_train <- x[mem_vec == 1, ]
+  x_test  <- x[mem_vec == 2, ]
+  
+  y_train <- y[mem_vec == 1] %>% 
+    # we need to subtract one in order for the factor levels to start at 0
+    `-`(1) %>% 
+    # use one hot encoding, as is provided by keras::to_categorical
+    to_categorical(num_classes = n_lvl)
+  
+  y_test <- y[mem_vec == 2] %>% 
+    # we need to subtract one in order for the factor levels to start at 0
+    `-`(1) %>% 
+    # use one hot encoding, as is provided by keras::to_categorical
+    to_categorical(num_classes = n_lvl)
+  
+  # save original test values for y
+  y_test_vec <- y[mem_vec == 2]
+  
+  n_train <- length(y_train)
+  n_test  <- length(y_test )
+  
+  
+  ## normalization of test and training data
+  
+  # get means and sds of all pred vars for training data
+  train_mean <- apply(x_train, 2, mean)
+  train_sd   <- apply(x_train, 2, sd)
+  
+  # center and scale test and training data to mean and sd of training data
+  for (i in 1:n_var) {
+    
+    x_train[ , i] <- scale(x_train[ , i],
+                           center = train_mean[i],
+                           scale  = train_sd  [i])
+    
+    x_test [ , i] <- scale(x_test [ , i],
+                           center = train_mean[i],
+                           scale  = train_sd  [i])
+    
+  }
+  
+  out <- list(train = list(x = x_train, y = y_train),
+              test  = list(x = x_test , y = y_test , y_orig = y_test_vec))
+  
+  return(out)
+}
+
+# function to generate and train a MLP with specific parameters
+train_model <- function(data,
+                        optimizer = "adam",
+                        input_act = "sigmoid",
+                        intermediate_act = "sigmoid",
+                        last_act = "softmax",
+                        epochs = 500,
+                        batch_size = 32,
+                        dropout_rate = 0,
+                        validation_split = 0.2,
+                        verbose = 0) {
+  
+  n_lvl <- ncol(data$train$y)
+  n_var <- ncol(data$train$x)
+  
+  # set up model
+  model <- keras_model_sequential() 
+  
+  model %>% 
+    
+    # define input layer
+    layer_dense(units       = n_var,
+                activation  = input_act,
+                input_shape = n_var) %>% 
+    
+    # define intermediate layers
+    layer_dense(units = 10,
+                activation = intermediate_act) %>%
+    
+    # add a dropout layer
+    layer_dropout(rate = dropout_rate) %>% 
+    
+    
+    # define output layer
+    # number of nodes/units corresponds to number of levels of dependent variable
+    # uses softmax activation for multiclass prediction
+    layer_dense(units = ncol(data$train$y),
+                activation = last_act)
+  
+  # specify how model will be run
+  model %>% 
+    compile(loss      = "binary_crossentropy",
+            optimizer = optimizer,
+            metrics   = c("accuracy"))
+  
+  # train the model
+  history <- model %>% 
+  fit(x = data$train$x,
+      y = data$train$y,
+      
+      epochs = epochs,
+      
+      batch_size = batch_size,
+      
+      validation_split = validation_split,
+      verbose = verbose)
+  
+  # give the final model performance on the testing data
+  test_performance <- model %>% 
+    evaluate(data$test$x, data$test$y, verbose = verbose)
+
+  # extract class probabilities for test data
+  prob <- model %>% 
+    predict(data$test$x)
+  
+  # extract predicted classes from probabilities
+  predClass <- apply(prob, 1, which.max)
+  
+  # confusion table
+  conf_table <- table(predicted = predClass, actual = data$test$y_orig)
+  
+  return(list(model = model, history = history, confusionTable = conf_table,
+              testPerformance = test_performance))
+  
+}
+
+# load data
+data("iris")
+
+
+
+## ----non-working model--------------------------------------------------------
+
+# using the data as is
+data_orig <- generateTestTraining(iris,
+                                  dep_col  = names(iris)[ 5],
+                                  pred_col = names(iris)[-5])
+
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data_orig)
+  )[["elapsed"]]
+
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
+
+
+
+## ----working model------------------------------------------------------------
+
+# using shuffled data:
+data      <- generateTestTraining(iris[sample(1:nrow(iris)), ],
+                                  dep_col  = names(iris)[ 5],
+                                  pred_col = names(iris)[-5])
+
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data)
+  )[["elapsed"]]
+
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
+
+
+
+## ----increasing epochs--------------------------------------------------------
+
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data,
+                        epochs = 1000)
+  )[["elapsed"]]
+
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
+
+
+
+
+## ----adding dropout-----------------------------------------------------------
+
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data,
+                        epochs = 1000,
+                        dropout_rate = 0.1)
+  )[["elapsed"]]
+
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
+
+
