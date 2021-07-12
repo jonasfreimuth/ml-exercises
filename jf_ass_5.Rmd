@@ -96,9 +96,10 @@ train_model <- function(data,
                         input_act = "sigmoid",
                         intermediate_act = "sigmoid",
                         last_act = "softmax",
-                        epochs = 200,
+                        epochs = 500,
                         batch_size = 32,
-                        validation_split,
+                        dropout_rate = 0,
+                        validation_split = 0.2,
                         verbose = 0) {
   
   n_lvl <- ncol(data$train$y)
@@ -117,6 +118,9 @@ train_model <- function(data,
     # define intermediate layers
     layer_dense(units = 10,
                 activation = intermediate_act) %>%
+    
+    # add a dropout layer
+    layer_dropout(rate = dropout_rate) %>% 
     
     
     # define output layer
@@ -140,11 +144,12 @@ train_model <- function(data,
       
       batch_size = batch_size,
       
-      validation_split = 0.2,
+      validation_split = validation_split,
       verbose = verbose)
   
   # give the final model performance on the testing data
-  print(model %>% evaluate(data$test$x, data$test$y, verbose = verbose))
+  test_performance <- model %>% 
+    evaluate(data$test$x, data$test$y, verbose = verbose)
 
   # extract class probabilities for test data
   prob <- model %>% 
@@ -156,7 +161,8 @@ train_model <- function(data,
   # confusion table
   conf_table <- table(predicted = predClass, actual = data$test$y_orig)
   
-  return(list(model = model, history = history, confusionTable = conf_table))
+  return(list(model = model, history = history, confusionTable = conf_table,
+              testPerformance = test_performance))
   
 }
 
@@ -177,14 +183,17 @@ data_orig <- generateTestTraining(iris,
 
 # gives time in seconds for model training
 system.time(
-  output_orig <- train_model(data_orig)
+  output <- train_model(data_orig)
   )[["elapsed"]]
 
-# show output performancy
-plot(output_orig$history)
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
 
 # show confusion table
-print(output_orig$confusionTable)
+print(output$confusionTable)
 
 ```
 
@@ -206,21 +215,66 @@ system.time(
   output <- train_model(data)
   )[["elapsed"]]
 
-# show output performancy
-plot(output_orig$history)
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
 
 # show confusion table
-print(output_orig$confusionTable)
+print(output$confusionTable)
 
 ```
-Here after 
+Here, after `r formals(train_model)$epochs` epochs, the model achieves decent
+accuracy and identifies members of all species.  
+The accuracy may be improved further by increasing the number of epochs of 
+training:
 
-```{r varying activation function}
+```{r increasing epochs}
 
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data,
+                        epochs = 1000)
+  )[["elapsed"]]
 
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
 
 
 ```
 
+This seems not actually to be the case. Model training performance increases 
+with the number of epochs the model is trained for, but testing performance is 
+not increasing. This is due to overfitting of the model to the training data.  
+Let's see whether this can be alleviated with the introduction of a dropout 
+layer:
 
+```{r adding dropout}
+
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data,
+                        epochs = 1000,
+                        dropout_rate = 0.1)
+  )[["elapsed"]]
+
+# show output performance
+plot(output$history)
+
+# show performance on test data
+print(output$testPerformance)
+
+# show confusion table
+print(output$confusionTable)
+
+```
+As we can see, the introduction of some artificial noise can help to achieve a 
+model that performs well on testing data.
 
