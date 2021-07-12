@@ -1,11 +1,16 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Machine Learning"
+subtitle: "Assignment 5"
+author: "Jonas Freimuth, 807218"
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 
-```{r Setup, include=FALSE}
+```{r Setup}
 
 library("keras")
+library("ggplot2")
 
 ## function definitions
 
@@ -85,13 +90,13 @@ generateTestTraining <- function(df, dep_col, pred_col) {
   return(out)
 }
 
-
+# function to generate and train a MLP with specific parameters
 train_model <- function(data,
                         optimizer = "adam",
                         input_act = "sigmoid",
                         intermediate_act = "sigmoid",
                         last_act = "softmax",
-                        epochs = 500,
+                        epochs = 200,
                         batch_size = 32,
                         validation_split,
                         verbose = 0) {
@@ -126,8 +131,6 @@ train_model <- function(data,
             optimizer = optimizer,
             metrics   = c("accuracy"))
   
-  browser()
-  
   # train the model
   history <- model %>% 
   fit(x = data$train$x,
@@ -157,37 +160,67 @@ train_model <- function(data,
   
 }
 
-
-```
-
-During setup I noticed that training looks quite different when the data is not 
-shuffled:
-
-```{r Data preparation, include=FALSE}
-
 # load data
 data("iris")
 
+```
+
+During the creation of this script, I noticed that training looks quite
+different when the data is not shuffled:
+
+```{r non-working model}
+
+# using the data as is
 data_orig <- generateTestTraining(iris,
                                   dep_col  = names(iris)[ 5],
                                   pred_col = names(iris)[-5])
 
+# gives time in seconds for model training
+system.time(
+  output_orig <- train_model(data_orig)
+  )[["elapsed"]]
+
+# show output performancy
+plot(output_orig$history)
+
+# show confusion table
+print(output_orig$confusionTable)
+
+```
+
+When not shuffling the input data prior to the splitting and normalizing, the 
+model shows very poor behavior. It is unable to predict any of the last iris 
+species correctly and its validation accuracy is 0 across all epochs. Currently
+I can't explain why that is.  
+When the data is shuffled however, the problem disappears:
+
+```{r working model}
+
+# using shuffled data:
 data      <- generateTestTraining(iris[sample(1:nrow(iris)), ],
                                   dep_col  = names(iris)[ 5],
                                   pred_col = names(iris)[-5])
 
+# gives time in seconds for model training
+system.time(
+  output <- train_model(data)
+  )[["elapsed"]]
+
+# show output performancy
+plot(output_orig$history)
+
+# show confusion table
+print(output_orig$confusionTable)
+
 ```
+Here after 
+
+```{r varying activation function}
 
 
 
-
-
-```{r working model}
-
-train_model(data)
 
 ```
-
 
 
 
