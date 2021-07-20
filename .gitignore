@@ -1,5 +1,12 @@
+# R session stuff
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+
+# data stuff
 data
+
+# rmarkdown stuff
+**/*.pdf
+**/*.html
