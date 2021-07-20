@@ -3,12 +3,20 @@ title: "Machine Learning"
 subtitle: "Assignment 6"
 author: "Jonas Freimuth, 807218"
 output:
-  pdf_document: default
   html_notebook: default
+  pdf_document: default
 ---
 
-```{r Setup}
+```{r Setup, include=FALSE}
 
+knitr::opts_chunk$set(fig.height = 4)
+
+```
+  
+First we define the necessary functions:  
+
+
+``` {r Fucntions}
 checkVecs <- function(x, y) {
   if (length(x) != length(y)) {
     stop(paste0("Input vectors are of different lengths. (", length(x), ", ",
@@ -68,6 +76,9 @@ simple_auc <- function(TPR, FPR){
   # inputs already sorted, best scores first
   dFPR <- c(diff(FPR), 0)
   dTPR <- c(diff(TPR), 0)
+  
+  # browser()
+  
   AUC <- sum(TPR * dFPR) + sum(dTPR * dFPR) / 2
   
   return(AUC)
@@ -91,16 +102,16 @@ ROC <- function(score, class) {
     
   }
   
-  AUC <- simple_auc(tpr_vec[order(tpr_vec)], fpr_vec[order(tpr_vec)])
+  AUC <- simple_auc(sort(tpr_vec), sort(fpr_vec))
   
   opar <- par(mfrow = c(1, 2))
   
   plot(pch = 18, fpr_vec[order(tpr_vec)], tpr_vec[order(tpr_vec)],
-       main = paste("AUC =", AUC),
+       main = paste("AUC =", round(AUC, 3)),
        xlab = "FPR", ylab = "TPR")
   
   plot(type = "l", score[order(score)], ysJ_vec[order(score)],
-       main = paste("Best J =", max(ysJ_vec)),
+       main = paste("Best J =", round(max(ysJ_vec), 3)),
        xlab = "cutoff", ylab = "Youden's J")
   
   par(opar)
@@ -111,15 +122,14 @@ ROC <- function(score, class) {
 ```
 
 With these functions we test how well the classes can be separated for different 
-distances between them, and how the probability for class 1 having a higher value 
+distances $\delta$ between them, and how the probability for class 1 having a 
+higher value 
 than class 1, when choosing samples at random, varies and relates to the AUC of
 the ROC for the random populations.
 
 ```{r Multiple delta}
 
-# TODO: AUC does not get computed properly
-
-delta_vec <- seq(0, 3, 0.2)
+delta_vec <- seq(0, 2, 0.5)
 
 n_rep <- 1000
 
@@ -146,21 +156,33 @@ for (i in 1:length(delta_vec)) {
   
   
   p <- n_neg_greater / n_rep
+  
+  cat("Delta = ", delta)
+  
   AUC <- ROC(score, class)
-  
-  # print(paste("Delta: ", delta))
-  # print(paste("  p = ", p))
-  # print(paste("  AUC = ", AUC))
-  
   
   res$p  [i] <- p
   res$AUC[i] <- AUC
   
 }
 
-cor(res$p, res$AUC)
-cor(res$delta, res$p)
-cor(res$delta, res$AUC)
-
 ```
-
+For low values of $\delta$ (i.e. a weak separation of the groups), the probability of 
+picking a pair of values consisting of
+one value from each class and the value from class 1 being greater than the value
+from class 2 is pretty much just 50% ($`r round(res[["p"]][1], 3)`$, for 
+$\delta = `r res[["delta"]][1]`$). Similarly, the AUC also makes up about half 
+of its maximum ($`r round(res[["AUC"]][1], 3)`$, for $\delta = `r res$delta[1]`$). 
+For greater values of $\delta$ however, it becomes increasingly unlikely to find a 
+random value from class 0 which is greater than a random value from class 1 
+($`r round(res[["p"]][nrow(res)], 3)`$, for $\delta = `r res[["delta"]][nrow(res)]`$).
+In the same fashion, as the separation between the groups increases, the AUC covers 
+almost all of the plot area, leading to values close to 1 (
+$`r res[["AUC"]][nrow(res)]`$, for $\delta = `r res[["delta"]][nrow(res)]`$).  
+As we can imagine, the correlations between $\delta$ and the probability to find a
+larger value in class 0 than in class 1 
+($r_{delta, p} = `r round(cor(res[["delta"]], res[["p"]]), 3)`$), as well as between
+delta and the AUC 
+($r_{delta, AUC} = `r round(cor(res[["delta"]], res[["AUC"]]), 3)`$)
+and therefore between $\delta$ and the AUC, 
+$r_{p, AUC} = `r round(cor(res[["p"]], res[["AUC"]]), 3)`$), are all high.
