@@ -1,0 +1,92 @@
+---
+title: "Machine Learning"
+subtitle: "Assignment 6"
+author: "Jonas Freimuth, 807218"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r Setup}
+NP <-  50 # N positive class samples
+NN <-  50 # N negative class samples
+delta <-  1 # shift of score distribution of positive vs. negative samples
+score <-  rnorm(NN) # random score values
+score <-  c(score, rnorm(NP) + delta)
+class <-  c(rep(0, NN), rep(1, NP)) # class assignment
+PC <-  1 # class considered as the positive class
+
+checkVecs <- function(x, y) {
+  if (length(x) != length(y)) {
+    stop(paste0("Input vectors are of different lengths. (", length(x), ", ",
+                length(y), ")"))
+  }
+}
+
+confusion <- function(score, class, x) {
+  checkVecs(score, class)
+  
+  score_dich <- as.numeric(score > x)
+  
+  pos_ind <- which(score_dich == 1)
+  neg_ind <- which(score_dich == 0)
+  
+  tp <- sum(score_dich[pos_ind] == class[pos_ind])
+  tn <- sum(score_dich[neg_ind] == class[neg_ind])
+  
+  fp <- sum(score_dich[pos_ind] != class[pos_ind])
+  fn <- sum(score_dich[neg_ind] != class[neg_ind])
+  
+  return(list(tp = tp, tn = tn, fp = fp, fn = fn))
+}
+
+youdensJ <- function(score = NULL, class = NULL, x = NULL,
+                     conf = NULL) {
+  
+  if (is.null(conf)) {
+    if (any(is.null(c(score, class, x)))) {
+      stop("If conf is not supplied, score, class and x must be provided.")
+    }
+    
+    conf <- confusion(score, class, x)
+  }
+  
+  # browser()
+  
+  j <- (conf$tp / (conf$tp + conf$fn)) + (conf$tn / (conf$fp + conf$tn)) - 1
+  
+  return(j)
+}
+
+ROC <- function(score, class) {
+  
+  checkVecs(score, class)
+  
+  tp_vec <- rep(0, length(score))
+  fp_vec <- tp_vec
+  yJ_vec <- tp_vec
+  
+  for (i in 1:length(score)) {
+    conf <- confusion(score, class, score[i])
+    
+    tp_vec[i] <- conf$tp
+    fp_vec[i] <- conf$fp
+    yJ_vec[i] <- youdensJ(conf = conf)
+    
+  }
+  
+  opar <- par(mfrow = c(1, 2))
+  
+  plot(type = "b", fp_vec[order(fp_vec)], tp_vec[order(fp_vec)],
+                                                 xlab = "FP", ylab = "TP")
+  
+  plot(type = "l", score[order(score)], yJ_vec[order(score)],
+       xlab = "cutoff", ylab = "Youden's J")
+  
+  par(opar)
+}
+
+ROC(score, class)
+
+```
+
