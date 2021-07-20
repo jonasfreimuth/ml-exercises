@@ -8,19 +8,21 @@ output:
 ---
 
 ```{r Setup}
-NP <-  50 # N positive class samples
-NN <-  50 # N negative class samples
-delta <-  1 # shift of score distribution of positive vs. negative samples
-score <-  rnorm(NN) # random score values
-score <-  c(score, rnorm(NP) + delta)
-class <-  c(rep(0, NN), rep(1, NP)) # class assignment
-PC <-  1 # class considered as the positive class
 
 checkVecs <- function(x, y) {
   if (length(x) != length(y)) {
     stop(paste0("Input vectors are of different lengths. (", length(x), ", ",
                 length(y), ")"))
   }
+}
+
+makeData <- function(delta = 1, n_p = 200, n_n = 200) {
+  delta <-  delta # shift of score distribution of positive vs. negative samples
+  score <-  rnorm(n_n) # random score values
+  score <-  c(score, rnorm(n_p) + delta)
+  class <-  c(rep(0, n_n), rep(1, n_p)) # class assignment
+  
+  return(list(score = score, class = class))
 }
 
 confusion <- function(score, class, x) {
@@ -40,6 +42,7 @@ confusion <- function(score, class, x) {
   return(list(tp = tp, tn = tn, fp = fp, fn = fn))
 }
 
+
 youdensJ <- function(score = NULL, class = NULL, x = NULL,
                      conf = NULL) {
   
@@ -58,35 +61,106 @@ youdensJ <- function(score = NULL, class = NULL, x = NULL,
   return(j)
 }
 
+
+# this function is adapted from the function presented in
+#   https://www.r-bloggers.com/2016/11/calculating-auc-the-area-under-a-roc-curve/
+simple_auc <- function(TPR, FPR){
+  # inputs already sorted, best scores first
+  dFPR <- c(diff(FPR), 0)
+  dTPR <- c(diff(TPR), 0)
+  AUC <- sum(TPR * dFPR) + sum(dTPR * dFPR) / 2
+  
+  return(AUC)
+}
+
+
 ROC <- function(score, class) {
   
   checkVecs(score, class)
   
-  tp_vec <- rep(0, length(score))
-  fp_vec <- tp_vec
-  yJ_vec <- tp_vec
+  tpr_vec <- rep(0, length(score))
+  fpr_vec <- tpr_vec
+  ysJ_vec <- tpr_vec
   
   for (i in 1:length(score)) {
     conf <- confusion(score, class, score[i])
     
-    tp_vec[i] <- conf$tp
-    fp_vec[i] <- conf$fp
-    yJ_vec[i] <- youdensJ(conf = conf)
+    tpr_vec[i] <- conf$tp / (conf$tp + conf$fn)
+    fpr_vec[i] <- conf$fp / (conf$tn + conf$fp)
+    ysJ_vec[i] <- youdensJ(conf = conf)
     
   }
   
+  AUC <- simple_auc(tpr_vec[order(tpr_vec)], fpr_vec[order(tpr_vec)])
+  
   opar <- par(mfrow = c(1, 2))
   
-  plot(type = "b", fp_vec[order(fp_vec)], tp_vec[order(fp_vec)],
-                                                 xlab = "FP", ylab = "TP")
+  plot(pch = 18, fpr_vec[order(tpr_vec)], tpr_vec[order(tpr_vec)],
+       main = paste("AUC =", AUC),
+       xlab = "FPR", ylab = "TPR")
   
-  plot(type = "l", score[order(score)], yJ_vec[order(score)],
+  plot(type = "l", score[order(score)], ysJ_vec[order(score)],
+       main = paste("Best J =", max(ysJ_vec)),
        xlab = "cutoff", ylab = "Youden's J")
   
   par(opar)
+  
+  return(AUC)
 }
 
-ROC(score, class)
+```
+
+With these functions we test how well the classes can be separated for different 
+distances between them, and how the probability for class 1 having a higher value 
+than class 1, when choosing samples at random, varies and relates to the AUC of
+the ROC for the random populations.
+
+```{r Multiple delta}
+
+# TODO: AUC does not get computed properly
+
+delta_vec <- seq(0, 3, 0.2)
+
+n_rep <- 1000
+
+res <- data.frame(delta = delta_vec, p = rep(0, length(delta_vec)),
+                  AUC = rep(0, length(delta_vec)))
+
+for (i in 1:length(delta_vec)) {
+  
+  delta <- delta_vec[i]
+  
+  data <- makeData(delta = delta)
+  
+  score <- data$score
+  class <- data$class
+  
+  n_neg_greater <- 0
+  
+  for (j in 1:n_rep) {
+    rnd_pos <- sample(score[class == 1], 1)
+    rnd_neg <- sample(score[class != 1], 1)
+    
+    n_neg_greater <- n_neg_greater + (rnd_pos > rnd_neg)
+  }
+  
+  
+  p <- n_neg_greater / n_rep
+  AUC <- ROC(score, class)
+  
+  # print(paste("Delta: ", delta))
+  # print(paste("  p = ", p))
+  # print(paste("  AUC = ", AUC))
+  
+  
+  res$p  [i] <- p
+  res$AUC[i] <- AUC
+  
+}
+
+cor(res$p, res$AUC)
+cor(res$delta, res$p)
+cor(res$delta, res$AUC)
 
 ```
 
