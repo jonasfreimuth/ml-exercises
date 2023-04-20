@@ -1,0 +1,76 @@
+---
+title: "Assignment 1"
+author: "Jonas Freimuth, 807218"
+date: "27 7 2021"
+output: html_notebook
+---
+
+```{r Setup}
+d <- read.table("data/example_XY.txt", header = TRUE)
+
+MSE <- function (obs, pred) {
+  return ( sum((pred - obs) ^ 2) / length(obs) )
+}
+
+```
+
+```{r}
+
+degs <- 1:20
+errors <- rep(0, length(degs))
+aics <- errors
+
+for (i in 1:length(degs)) {
+  formula <- as.formula(paste0("d$y ~ poly(d$x, ", degs[i], ")"))
+  mod <- lm(formula)
+  
+  errors[i] <- MSE(d$y, predict(mod, newdata = as.data.frame(d$x)))
+  aics[i] <- AIC(mod)
+  
+  
+}
+
+opar <- par(mfrow = c(1, 2))
+
+plot(degs, errors)
+plot(degs, aics)
+
+par(opar)
+
+```
+
+```{r loo}
+
+loo_errors <- rep(0, length(degs))
+loo_aics   <- loo_errors
+
+for (i in 1:length(degs)) {
+  
+  i_errors <- rep(0, nrow(d))
+  i_aics   <- i_errors
+  
+  for (j in 1:nrow(d)) {
+    d_train <- d[-i, ]
+    d_test  <- d[ i, ]
+    
+    d_train$x <- as.numeric(poly(d_train$x, degs[i]))
+    
+    mod <- lm(y ~ x, data = d_train)
+    
+    i_errors[j] <- MSE(d_test$y,
+                       predict(mod, newdata = data.frame(x = d_test$x)))
+    i_aics  [j] <- AIC(mod)
+  }
+  
+  loo_errors[i] <- mean(i_errors)
+  loo_aics  [i] <- mean(i_aics  )
+}
+
+opar <- par(mfrow = c(1, 2))
+
+plot(degs, loo_errors)
+plot(degs, loo_aics)
+
+par(opar)
+```
+

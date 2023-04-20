@@ -6,7 +6,7 @@ if (!(require ("dplyr", quietly = TRUE)&& require ("tidyr", quietly = TRUE)) ) {
 
 dir <- paste(
   'https://raw.githubusercontent.com/gockelhahn/',
-  'qual-o-mat-data/master/data/2021/badenwuerttemberg/',
+  'qual-o-mat-data/master/data/2021/deutschland/',
   sep = '')
 
 # get lookup for answer ids

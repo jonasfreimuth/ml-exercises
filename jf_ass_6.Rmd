@@ -91,6 +91,7 @@ ROC <- function(score, class) {
   
   tpr_vec <- rep(0, length(score))
   fpr_vec <- tpr_vec
+  prc_vec <- tpr_vec
   ysJ_vec <- tpr_vec
   
   for (i in 1:length(score)) {
@@ -98,25 +99,31 @@ ROC <- function(score, class) {
     
     tpr_vec[i] <- conf$tp / (conf$tp + conf$fn)
     fpr_vec[i] <- conf$fp / (conf$tn + conf$fp)
+    prc_vec[i] <- conf$tp / (conf$tp + conf$fp)
     ysJ_vec[i] <- youdensJ(conf = conf)
     
   }
   
-  AUC <- simple_auc(sort(tpr_vec), sort(fpr_vec))
+  AUC_ROC <- simple_auc(sort(tpr_vec), sort(fpr_vec))
+  AUC_PRC <- simple_auc(sort(prc_vec), sort(tpr_vec))
   
-  opar <- par(mfrow = c(1, 2))
+  opar <- par(mfrow = c(2, 2))
   
   plot(pch = 18, fpr_vec[order(tpr_vec)], tpr_vec[order(tpr_vec)],
-       main = paste("AUC =", round(AUC, 3)),
+       main = paste("AUC =", round(AUC_ROC, 3)),
        xlab = "FPR", ylab = "TPR")
   
   plot(type = "l", score[order(score)], ysJ_vec[order(score)],
        main = paste("Best J =", round(max(ysJ_vec), 3)),
        xlab = "cutoff", ylab = "Youden's J")
   
+  plot(pch = 18, tpr_vec[order(tpr_vec)], prc_vec[order(tpr_vec)],
+       main = paste("AUC =", round(AUC_PRC, 3)),
+       xlab = "Recall", ylab = "Precision")
+  
   par(opar)
   
-  return(AUC)
+  return(AUC_ROC)
 }
 
 ```
